@@ -47,39 +47,61 @@ def run_q_learning():
 
     agent = QLearningAgent(num_states, num_actions)
 
-    num_episodes = 1950
+    num_episodes = 2000
 
     best_reward = float('-inf')
     worst_reward = float('inf')
     total_rewards = []
+
     # 新增一個列表來儲存每個回合的平均報酬
     episode_rewards = []
+
+    # Track optimal path
+    optimal_path = []
+
     for episode in range(num_episodes):
-        state = 0  # Start from the top-left corner
+
         
+        state = 0  # Start from the top-left corner
+
         prev_row = 0
         prev_col = 0
         total_reward = 0
+        episode_path = []  # Track actions for this episode
+        has_hit_obstacle = False # 是否有走到 1
+
         while True:
             action = agent.select_action(state)
+            episode_path.append(action)  # Record the action
 
             # Simulate the environment (update the state based on the action)
             next_state = take_action(state, action, maze)
             reward = get_reward(next_state, maze, prev_row, prev_col)
             prev_row, prev_col = np.unravel_index(state, maze.shape)
+            
+            if reward == -1:  # 走到 1
+                has_hit_obstacle = True
+
             # Update Q-values
             agent.update_q_values(state, action, reward, next_state)
-
-            
 
             total_reward += reward
             state = next_state
 
-            
-
-            if maze.flat[next_state] == 2:  # Reached the goal
-                # print(f"Goal reached! Total Reward: {total_reward}")
+            if maze.flat[next_state] == 2 :  # Reached the goal
+                if (len(optimal_path) > len(episode_path) and not has_hit_obstacle) or len(optimal_path) == 0:
+                    optimal_path = episode_path  # Update optimal path
+                    # Output the optimal path
+                    print("Optimal Path:", optimal_path)
+                    print("len:", len(optimal_path))
+                    print("times:", episode)
+                has_hit_obstacle = False
                 break
+
+                #Optimal Path: [1, 1, 1, 1, 3, 3, 1, 1, 1, 3, 1, 1, 3, 3, 0, 0, 0, 0, 2, 0, 0, 0, 2, 2]
+                #len: 24
+                #times: 589
+
         # 更新最佳、最差成績以及瓶頸
         if total_reward > best_reward :
             best_reward = total_reward
@@ -95,6 +117,8 @@ def run_q_learning():
         episode_rewards.append(average_reward)
     # 只選擇最後100次的平均值
     last_100_episode_rewards = episode_rewards[-100:]
+
+    
 
     # 設置畫布，建立兩個子圖，一行兩列
     fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 5))
@@ -131,18 +155,18 @@ def run_q_learning():
     print(f"Average Reward : {average_reward}")
     print(f"Q-values:\n{agent.q_values}")
 
-    print(f"Q-values:\n{agent.q_values}")
+    
 
 def take_action(state, action, maze):
     # Simulate the environment and return the next state based on the action
     num_cols = maze.shape[1]
     row, col = divmod(state, num_cols)
 
-    if action == 0 and row != 0:  # Move up
+    if action == 0 :  # Move up
         row = max(0, row - 1)
-    elif action == 1 and row != maze.shape[0] -1:  # Move down
+    elif action == 1:  # Move down
         row = min(maze.shape[0] - 1, row + 1)
-    elif action == 2:  # Move left
+    elif action == 2 :  # Move left
         col = max(0, col - 1)
     elif action == 3:  # Move right
         col = min(maze.shape[1] - 1, col + 1)
